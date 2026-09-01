@@ -608,7 +608,7 @@ function renderStudentFile(){
             <h4>Documents</h4>
             ${docListHtml(state.studentDocs.filter(d=>d.student_id===s.id), 'deleteStudentDoc')}
             <button class="ubtn secondary doc-upload-btn small">+ Upload Document
-              <input type="file" onchange="handleStudentDocUpload(event,'${s.id}')">
+              <input type="file" multiple onchange="handleStudentDocUpload(event,'${s.id}')">
             </button>
           </div>
         </div>
@@ -636,13 +636,17 @@ async function deleteSubject(id){
   renderStudentFile();
 }
 async function handleStudentDocUpload(ev, studentId){
-  const file = ev.target.files[0]; if(!file) return;
-  const url = await uploadDocumentFile(file);
-  if(!url) return;
-  const { data, error } = await sb.from('student_documents').insert({ student_id: studentId, file_name: file.name, file_url: url }).select().single();
-  if(error){ toast('Error: '+error.message, true); return; }
-  state.studentDocs.unshift(data);
-  toast('Document uploaded');
+  const files = Array.from(ev.target.files || []);
+  if(files.length===0) return;
+  toast(`Uploading ${files.length} document(s)...`);
+  for(const file of files){
+    const url = await uploadDocumentFile(file);
+    if(!url) continue;
+    const { data, error } = await sb.from('student_documents').insert({ student_id: studentId, file_name: file.name, file_url: url }).select().single();
+    if(error){ toast('Error: '+error.message, true); continue; }
+    state.studentDocs.unshift(data);
+  }
+  toast('Documents uploaded');
   renderStudentFile();
 }
 async function deleteStudentDoc(id){
@@ -775,7 +779,7 @@ function renderTeacherFile(){
             <h4>Documents</h4>
             ${docListHtml(state.teacherDocs.filter(d=>d.teacher_id===t.id), 'deleteTeacherDoc')}
             <button class="ubtn secondary doc-upload-btn small">+ Upload Document
-              <input type="file" onchange="handleTeacherDocUpload(event,'${t.id}')">
+              <input type="file" multiple onchange="handleTeacherDocUpload(event,'${t.id}')">
             </button>
           </div>
         </div>
@@ -803,13 +807,17 @@ async function deleteTeacherSubject(id){
   renderTeacherFile();
 }
 async function handleTeacherDocUpload(ev, teacherId){
-  const file = ev.target.files[0]; if(!file) return;
-  const url = await uploadDocumentFile(file);
-  if(!url) return;
-  const { data, error } = await sb.from('teacher_documents').insert({ teacher_id: teacherId, file_name: file.name, file_url: url }).select().single();
-  if(error){ toast('Error: '+error.message, true); return; }
-  state.teacherDocs.unshift(data);
-  toast('Document uploaded');
+  const files = Array.from(ev.target.files || []);
+  if(files.length===0) return;
+  toast(`Uploading ${files.length} document(s)...`);
+  for(const file of files){
+    const url = await uploadDocumentFile(file);
+    if(!url) continue;
+    const { data, error } = await sb.from('teacher_documents').insert({ teacher_id: teacherId, file_name: file.name, file_url: url }).select().single();
+    if(error){ toast('Error: '+error.message, true); continue; }
+    state.teacherDocs.unshift(data);
+  }
+  toast('Documents uploaded');
   renderTeacherFile();
 }
 async function deleteTeacherDoc(id){

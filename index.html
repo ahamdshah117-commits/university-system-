@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>University Records Register</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --paper:#F5EFDE;
+  --paper-edge:#E9DFC4;
+  --ink:#2B2118;
+  --maroon:#7A1F2B;
+  --maroon-dark:#5A1620;
+  --gold:#B8860B;
+  --forest:#2F4538;
+  --line:#C9BFA0;
+  --ok:#2F4538;
+  --err:#7A1F2B;
+  --card-shadow: 0 3px 10px rgba(43,33,24,0.18);
+  --font-display:'Georgia', serif;
+  --font-body:'Georgia', serif;
+  --font-data:'Consolas','Courier New', monospace;
+  --font-ui:'Segoe UI', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+body,html{margin:0;padding:0;background:#e4dcc4;font-family:var(--font-ui);color:var(--ink);}
+.usys-root{
+  background:
+    repeating-linear-gradient(180deg, transparent, transparent 27px, var(--line) 28px),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-edge) 100%);
+  min-height:100vh;position:relative;max-width:1240px;margin:0 auto;box-shadow:0 0 30px rgba(0,0,0,0.15);
+}
+.uh{display:flex;align-items:center;gap:16px;padding:18px 28px;background:linear-gradient(180deg, var(--forest) 0%, #24352A 100%);color:var(--paper);border-bottom:4px double var(--gold);flex-wrap:wrap;}
+.uh-seal{width:52px;height:52px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--gold);flex-shrink:0;background:rgba(184,134,11,0.08);}
+.uh-titles{flex:1;min-width:200px;}
+.uh-titles input{background:transparent;border:none;color:var(--paper);font-family:var(--font-display);font-size:21px;font-weight:600;outline:none;width:100%;padding:2px 4px;border-radius:3px;}
+.uh-titles input:focus{background:rgba(255,255,255,0.08);}
+.uh-sub{font-family:var(--font-ui);font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:2px;display:flex;align-items:center;gap:8px;}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:#4a9;display:inline-block;}
+.conn-dot.bad{background:#c55;}
+.uh-actions{display:flex;gap:8px;}
+
+.unav{display:flex;gap:2px;padding:0 20px;background:var(--paper-edge);border-bottom:1px solid var(--line);overflow-x:auto;}
+.unav button{font-family:var(--font-ui);font-weight:600;font-size:13px;letter-spacing:.3px;padding:12px 20px;border:none;background:transparent;color:var(--ink);cursor:pointer;border-bottom:3px solid transparent;opacity:.6;white-space:nowrap;}
+.unav button.active{opacity:1;border-bottom:3px solid var(--maroon);background:var(--paper);}
+.unav button:hover{opacity:1;}
+
+.upanel{padding:22px 28px;}
+.uhead-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.uhead-row h2{font-family:var(--font-display);margin:0;font-size:19px;color:var(--maroon-dark);}
+.ubtn{font-family:var(--font-ui);font-weight:600;font-size:12.5px;background:var(--maroon);color:#fff;border:none;padding:9px 16px;border-radius:4px;cursor:pointer;letter-spacing:.3px;}
+.ubtn:hover{background:var(--maroon-dark);}
+.ubtn.secondary{background:transparent;color:var(--maroon);border:1.5px solid var(--maroon);}
+.ubtn.secondary:hover{background:rgba(122,31,43,0.06);}
+.ubtn.ghost{background:transparent;color:var(--forest);border:1px solid var(--line);}
+.ubtn.danger{background:#fff;color:var(--maroon);border:1.5px solid var(--maroon);}
+.ubtn.danger:hover{background:var(--maroon);color:#fff;}
+.ubtn:disabled{opacity:.5;cursor:not-allowed;}
+
+select.ufilter, input.ufilter{font-family:var(--font-ui);padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);font-size:13px;color:var(--ink);}
+
+.branch-grid{display:flex;flex-wrap:wrap;gap:10px;}
+.branch-card{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--forest);padding:12px 16px;border-radius:4px;min-width:170px;box-shadow:var(--card-shadow);position:relative;}
+.branch-card .bname{font-family:var(--font-display);font-weight:600;font-size:14.5px;padding-right:20px;}
+.branch-card .bcode{font-family:var(--font-data);font-size:11.5px;color:var(--maroon);letter-spacing:1px;}
+.branch-card .bmeta{font-size:11px;color:#6b6155;margin-top:4px;}
+.card-del{position:absolute;top:6px;right:8px;background:none;border:none;color:#a89a7d;cursor:pointer;font-size:14px;line-height:1;padding:2px;}
+.card-del:hover{color:var(--maroon);}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
+.person-card{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:12px;cursor:pointer;box-shadow:var(--card-shadow);position:relative;transition:transform .12s ease;}
+.person-card:hover{transform:translateY(-2px);}
+.person-card .card-del{top:8px;right:8px;background:rgba(245,239,222,.9);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;z-index:2;}
+.person-photo-wrap{width:100%;aspect-ratio:3/3.6;background:#ddd3ba;border-radius:3px;overflow:hidden;border:1px solid var(--line);margin-bottom:8px;position:relative;}
+.person-photo-wrap img{width:100%;height:100%;object-fit:cover;}
+.person-photo-wrap .noimg{display:flex;align-items:center;justify-content:center;height:100%;font-family:var(--font-display);font-size:28px;color:#a89a7d;}
+.corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.85;}
+.corner.tl{top:3px;left:3px;border-right:none;border-bottom:none;}
+.corner.tr{top:3px;right:3px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:3px;left:3px;border-right:none;border-top:none;}
+.corner.br{bottom:3px;right:3px;border-left:none;border-top:none;}
+.person-card .pname{font-family:var(--font-display);font-weight:600;font-size:14px;}
+.person-card .pmeta{font-family:var(--font-data);font-size:11px;color:var(--maroon);margin-top:2px;}
+.person-card .ptag{font-size:10.5px;color:var(--forest);margin-top:2px;font-weight:600;}
+
+.empty-note{padding:30px;text-align:center;color:#8c7f68;font-style:italic;font-family:var(--font-body);}
+.loading-note{padding:14px 28px;font-size:12px;color:#8c7f68;font-style:italic;}
+.storage-banner{padding:8px 28px;background:#fff8e1;border-bottom:1px solid #e0c97a;font-size:12px;color:#6b5410;display:none;}
+
+.uoverlay{position:fixed;inset:0;background:rgba(20,16,10,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.umodal{background:var(--paper);border-radius:6px;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);border:1px solid var(--line);}
+.umodal-head{padding:16px 22px;border-bottom:2px solid var(--maroon);display:flex;justify-content:space-between;align-items:center;}
+.umodal-head h3{font-family:var(--font-display);margin:0;font-size:17px;color:var(--maroon-dark);}
+.umodal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink);}
+.umodal-body{padding:20px 22px;}
+.ufield{margin-bottom:13px;}
+.ufield label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--forest);margin-bottom:4px;}
+.ufield input,.ufield select,.ufield textarea{width:100%;padding:8px 10px;font-family:var(--font-data);font-size:13px;border:1px solid var(--line);border-radius:3px;background:#fffdf7;color:var(--ink);}
+.ufield textarea{resize:vertical;min-height:50px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.photo-drop{border:2px dashed var(--line);border-radius:5px;padding:14px;text-align:center;cursor:pointer;background:#fffdf7;margin-bottom:14px;}
+.photo-drop img{max-width:100px;max-height:120px;border-radius:3px;border:1px solid var(--line);}
+.photo-drop span{display:block;font-size:12px;color:#8c7f68;margin-top:6px;}
+.umodal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+.stamp-fx{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;pointer-events:none;}
+.stamp-ring{width:150px;height:150px;border-radius:50%;border:4px solid var(--maroon);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--maroon);font-family:var(--font-display);font-weight:700;transform:scale(2.4) rotate(-18deg);opacity:0;animation:stampIn .55s cubic-bezier(.2,1.4,.4,1) forwards;}
+.stamp-ring .st1{font-size:11px;letter-spacing:3px;}
+.stamp-ring .st2{font-size:20px;margin:2px 0;}
+.stamp-ring .st3{font-size:9px;letter-spacing:2px;}
+@keyframes stampIn{0%{transform:scale(2.4) rotate(-18deg);opacity:0;}55%{transform:scale(.92) rotate(-12deg);opacity:1;}75%{transform:scale(1.05) rotate(-12deg);}100%{transform:scale(1) rotate(-12deg);opacity:0;}}
+
+.fileoverlay{position:fixed;inset:0;background:rgba(20,16,10,.65);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;}
+.filebook{background:var(--paper-edge);border-radius:6px;max-width:920px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 50px rgba(0,0,0,.45);}
+.filebook-head{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--forest);color:var(--paper);gap:12px;}
+.filebook-head h3{font-family:var(--font-display);margin:0;font-size:16px;flex:1;}
+.filebook-body{display:flex;flex:1;overflow:hidden;}
+.fb-page{flex:1;padding:20px;overflow-y:auto;}
+.fb-left{background:var(--paper);border-right:1px dashed var(--line);max-width:230px;}
+.fb-right{background:#FBF7EA;}
+.fb-photo{width:130px;aspect-ratio:3/3.6;border:1px solid var(--line);position:relative;background:#ddd3ba;margin-bottom:10px;overflow:hidden;cursor:pointer;}
+.fb-photo img{width:100%;height:100%;object-fit:cover;}
+.fb-name{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--maroon-dark);margin:6px 0 2px;}
+.fb-row{font-family:var(--font-data);font-size:12.5px;margin:5px 0;color:var(--ink);}
+.fb-row b{color:var(--forest);text-transform:uppercase;font-size:10px;letter-spacing:.5px;display:block;font-family:var(--font-ui);}
+.fb-stamp{margin-top:16px;width:90px;height:90px;border-radius:50%;border:3px solid var(--maroon);opacity:.8;display:flex;align-items:center;justify-content:center;transform:rotate(-10deg);color:var(--maroon);font-family:var(--font-display);font-size:10px;text-align:center;font-weight:700;letter-spacing:1px;}
+
+.sem-tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
+.sem-tab{font-family:var(--font-ui);font-size:11.5px;font-weight:700;padding:6px 10px;background:var(--paper);border:1px solid var(--line);border-radius:3px 3px 0 0;cursor:pointer;color:var(--ink);}
+.sem-tab.active{background:var(--maroon);color:#fff;border-color:var(--maroon);}
+.subj-table{width:100%;border-collapse:collapse;font-family:var(--font-data);font-size:12.5px;}
+.subj-table th{text-align:left;font-family:var(--font-ui);font-size:10.5px;text-transform:uppercase;color:var(--forest);border-bottom:1.5px solid var(--forest);padding:5px;}
+.subj-table td{padding:6px 5px;border-bottom:1px solid var(--line);}
+.subj-table input{width:100%;border:none;background:transparent;font-family:var(--font-data);font-size:12.5px;padding:2px;}
+.subj-table input:focus{background:#fff;outline:1px solid var(--gold);}
+.rm-btn{background:none;border:none;color:var(--maroon);cursor:pointer;font-size:13px;}
+.add-subj-btn{margin-top:8px;font-size:11.5px;padding:6px 10px;}
+
+.doc-section{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);}
+.doc-section h4{font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--forest);margin:0 0 8px;}
+.doc-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.doc-item{display:flex;align-items:center;gap:8px;background:#fffdf7;border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:12px;}
+.doc-item a{color:var(--maroon-dark);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-data);}
+.doc-item a:hover{text-decoration:underline;}
+.doc-empty{font-size:11.5px;color:#8c7f68;font-style:italic;margin-bottom:8px;}
+.doc-upload-btn{position:relative;overflow:hidden;display:inline-block;}
+.doc-upload-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+
+.cf-section{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);}
+.cf-section h4{font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--forest);margin:0 0 8px;}
+.cf-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.cf-row input.cf-key{width:38%;font-weight:700;}
+.cf-row input.cf-val{flex:1;}
+.cf-row input{font-family:var(--font-data);font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:3px;background:#fffdf7;}
+.cf-add-btn{margin-top:2px;}
+
+.lightbox-overlay{position:fixed;inset:0;background:rgba(10,8,5,.85);z-index:90;display:flex;align-items:center;justify-content:center;padding:24px;}
+.lightbox-overlay img{max-width:90vw;max-height:85vh;border:4px solid #fff;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+.lightbox-close{position:absolute;top:20px;right:28px;background:none;border:none;color:#fff;font-size:30px;cursor:pointer;}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:var(--paper);padding:13px 20px;border-radius:6px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;font-family:var(--font-ui);}
+.toast.error{background:var(--maroon);}
+
+@media (max-width:640px){
+  .filebook-body{flex-direction:column;overflow-y:auto;}
+  .fb-left{border-right:none;border-bottom:1px dashed var(--line);max-width:none;}
+  .two-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="usys-root" id="root">
+  <div class="uh">
+    <div class="uh-seal">UNI</div>
+    <div class="uh-titles">
+      <input id="uniName" value="University Records Register" />
+      <div class="uh-sub"><span class="conn-dot" id="connDot"></span><span id="connText">Connecting to database…</span></div>
+    </div>
+    <div class="uh-actions">
+      <button class="ubtn secondary" style="background:rgba(255,255,255,.08);color:#fff;border-color:var(--gold);" onclick="exportStudentsExcel()">Export to Excel</button>
+    </div>
+  </div>
+
+  <div class="storage-banner" id="storageBanner"></div>
+
+  <div class="unav">
+    <button class="active" data-tab="branches">Branches</button>
+    <button data-tab="students">Students</button>
+    <button data-tab="teachers">Teachers</button>
+  </div>
+
+  <div id="loadingNote" class="loading-note">Loading records from the university database…</div>
+  <div id="panels" style="display:none;">
+    <div class="upanel" data-panel="branches">
+      <div class="uhead-row">
+        <h2>Branches / Courses</h2>
+        <button class="ubtn" onclick="openBranchModal()">+ Add New Branch</button>
+      </div>
+      <div class="branch-grid" id="branchGrid"></div>
+    </div>
+
+    <div class="upanel" data-panel="students" style="display:none;">
+      <div class="uhead-row">
+        <h2>Student Records</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input class="ufilter" id="studentSearch" placeholder="Search name / roll no." oninput="renderStudents()">
+          <select class="ufilter" id="studentBranchFilter" onchange="renderStudents()"><option value="">All Branches</option></select>
+          <button class="ubtn" onclick="openStudentModal()">+ Add New Student</button>
+        </div>
+      </div>
+      <div class="card-grid" id="studentGrid"></div>
+    </div>
+
+    <div class="upanel" data-panel="teachers" style="display:none;">
+      <div class="uhead-row">
+        <h2>Teacher Records</h2>
+        <button class="ubtn" onclick="openTeacherModal()">+ Add New Teacher</button>
+      </div>
+      <div class="card-grid" id="teacherGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ CONFIG ============
+const SUPABASE_URL = "https://kpmpzfrautbtijbgzlcf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_g1u4WlnVgZGUoFFieCKSWQ_UZN2UEH2";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const SEM_COUNT = 8;
+let state = { branches: [], students: [], teachers: [], subjects: [], teacherSubjects: [], studentDocs: [], teacherDocs: [] };
+let activeTab = 'branches';
+let tempPhoto = null;       // pending upload for student modal
+let tempTeacherPhoto = null;
+let activeFilebookSem = 1;
+let activeFilebookStudentId = null;
+let activeFilebookTeacherSem = 1;
+let activeFilebookTeacherId = null;
+
+function uid(){ return crypto.randomUUID(); }
+function escapeHtml(str){ if(str===undefined||str===null) return ''; return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, isError){
+  const t = document.createElement('div');
+  t.className='toast'+(isError?' error':'');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+function showStamp(){
+  const el = document.createElement('div');
+  el.className='stamp-fx';
+  el.innerHTML = `<div class="stamp-ring"><span class="st1">UNIVERSITY</span><span class="st2">VERIFIED</span><span class="st3">RECORD ADDED</span></div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),650);
+}
+
+function showLightbox(src){
+  const overlay = document.createElement('div');
+  overlay.className='lightbox-overlay';
+  overlay.onclick = ()=>overlay.remove();
+  overlay.innerHTML = `<button class="lightbox-close">&times;</button><img src="${src}">`;
+  document.body.appendChild(overlay);
+}
+
+// ============ PHOTO UPLOAD (to Supabase Storage) ============
+function compressImage(file, maxW=480){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW/img.width);
+        const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>resolve({blob, dataUrl:canvas.toDataURL('image/jpeg',.78)}), 'image/jpeg', .78);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadPhotoBlob(blob){
+  const path = `${uid()}.jpg`;
+  const { error } = await sb.storage.from('photos').upload(path, blob, { contentType:'image/jpeg' });
+  if(error){ toast('Photo upload failed: '+error.message, true); return null; }
+  const { data } = sb.storage.from('photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function uploadDocumentFile(file){
+  const path = `${uid()}_${file.name}`;
+  const { error } = await sb.storage.from('documents').upload(path, file);
+  if(error){ toast('Document upload failed: '+error.message, true); return null; }
+  const { data } = sb.storage.from('documents').getPublicUrl(path);
+  return data.publicUrl;
+}
+function docListHtml(docs, deleteFn){
+  if(docs.length===0) return `<div class="doc-empty">No documents uploaded yet.</div>`;
+  return `<div class="doc-list">${docs.map(d=>`
+    <div class="doc-item">
+      <a href="${d.file_url}" target="_blank" rel="noopener">${escapeHtml(d.file_name)}</a>
+      <button class="rm-btn" onclick="${deleteFn}('${d.id}')">&#10005;</button>
+    </div>`).join('')}</div>`;
+}
+
+function customFieldsHtml(entity, table, id, refreshFn){
+  const obj = (entity && entity.custom_fields) || {};
+  const keys = Object.keys(obj);
+  const rowsHtml = keys.map(k=>`
+    <div class="cf-row" data-key="${escapeHtml(k)}">
+      <input class="cf-key" value="${escapeHtml(k)}" onchange="renameCustomField(this,'${table}','${id}','${refreshFn}')">
+      <input class="cf-val" value="${escapeHtml(String(obj[k]))}" onchange="updateCustomFieldVal(this,'${table}','${id}','${refreshFn}')">
+      <button class="rm-btn" onclick="deleteCustomField(this,'${table}','${id}','${refreshFn}')">&#10005;</button>
+    </div>`).join('');
+  return `<div class="cf-section"><h4>Additional Fields</h4>${rowsHtml || '<div class="doc-empty">No additional fields yet. Add your own below \u2014 no need to ask for a new version of the site.</div>'}<button class="ubtn secondary small cf-add-btn" onclick="addCustomField('${table}','${id}','${refreshFn}')">+ Add Field</button></div>`;
+}
+function findEntity(table,id){
+  if(table==='students') return state.students.find(x=>x.id===id);
+  if(table==='teachers') return state.teachers.find(x=>x.id===id);
+}
+async function saveCustomFields(table,id,obj,refreshFn){
+  const { error } = await sb.from(table).update({ custom_fields: obj }).eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  const entity = findEntity(table,id);
+  entity.custom_fields = obj;
+  window[refreshFn]();
+}
+async function renameCustomField(inputEl, table, id, refreshFn){
+  const row = inputEl.closest('.cf-row');
+  const oldKey = row.dataset.key;
+  const newKey = inputEl.value.trim();
+  if(!newKey || newKey===oldKey){ inputEl.value = oldKey; return; }
+  const entity = findEntity(table,id);
+  const obj = {...(entity.custom_fields||{})};
+  obj[newKey] = obj[oldKey];
+  delete obj[oldKey];
+  await saveCustomFields(table,id,obj,refreshFn);
+}
+async function updateCustomFieldVal(inputEl, table, id, refreshFn){
+  const row = inputEl.closest('.cf-row');
+  const key = row.dataset.key;
+  const entity = findEntity(table,id);
+  const obj = {...(entity.custom_fields||{})};
+  obj[key] = inputEl.value;
+  await saveCustomFields(table,id,obj,refreshFn);
+}
+async function deleteCustomField(btnEl, table, id, refreshFn){
+  const row = btnEl.closest('.cf-row');
+  const key = row.dataset.key;
+  const entity = findEntity(table,id);
+  const obj = {...(entity.custom_fields||{})};
+  delete obj[key];
+  await saveCustomFields(table,id,obj,refreshFn);
+}
+async function addCustomField(table, id, refreshFn){
+  const key = prompt('Field name (e.g. "Blood Group", "Hostel Room No.", "Scholarship")');
+  if(!key) return;
+  const value = prompt(`Value for "${key}"`) || '';
+  const entity = findEntity(table,id);
+  const obj = {...(entity.custom_fields||{})};
+  obj[key] = value;
+  await saveCustomFields(table,id,obj,refreshFn);
+}
+
+// ============ LOAD ============
+async function checkConnection(){
+  const { error } = await sb.from('branches').select('id').limit(1);
+  const dot = document.getElementById('connDot');
+  const text = document.getElementById('connText');
+  if(error){
+    dot.classList.add('bad');
+    text.textContent = 'Database not reachable';
+    const banner = document.getElementById('storageBanner');
+    banner.style.display='block';
+    banner.textContent = 'Could not connect to the university database. Check your internet connection, or make sure both SQL scripts have been run in Supabase.';
+  } else {
+    text.textContent = 'Connected to university database';
+  }
+}
+
+async function loadAll(){
+  await checkConnection();
+  const [{data:branches}, {data:students}, {data:teachers}, {data:subjects}, {data:teacherSubjects}, {data:studentDocs}, {data:teacherDocs}] = await Promise.all([
+    sb.from('branches').select('*').order('name'),
+    sb.from('students').select('*').order('created_at',{ascending:false}),
+    sb.from('teachers').select('*').order('created_at',{ascending:false}),
+    sb.from('student_subjects').select('*'),
+    sb.from('teacher_subjects').select('*'),
+    sb.from('student_documents').select('*').order('uploaded_at',{ascending:false}),
+    sb.from('teacher_documents').select('*').order('uploaded_at',{ascending:false})
+  ]);
+  state.branches = branches || [];
+  state.students = students || [];
+  state.teachers = teachers || [];
+  state.subjects = subjects || [];
+  state.teacherSubjects = teacherSubjects || [];
+  state.studentDocs = studentDocs || [];
+  state.teacherDocs = teacherDocs || [];
+
+  document.getElementById('loadingNote').style.display='none';
+  document.getElementById('panels').style.display='block';
+  renderAll();
+}
+
+document.querySelectorAll('.unav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.unav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('.upanel').forEach(p=>p.style.display = (p.dataset.panel===activeTab?'block':'none'));
+  });
+});
+
+function renderAll(){ renderBranches(); renderBranchSelects(); renderStudents(); renderTeachers(); }
+
+// ============ BRANCHES ============
+function renderBranches(){
+  const grid = document.getElementById('branchGrid');
+  if(state.branches.length===0){ grid.innerHTML = '<div class="empty-note">No branches added yet. Click "+ Add New Branch" to get started.</div>'; return; }
+  grid.innerHTML = state.branches.map(b=>{
+    const count = state.students.filter(s=>s.branch_id===b.id).length;
+    return `<div class="branch-card">
+      <button class="card-del" title="Delete branch" onclick="deleteBranch('${b.id}')">&#10005;</button>
+      <div class="bname">${escapeHtml(b.name)}</div>
+      <div class="bcode">${escapeHtml(b.code||'')}</div>
+      <div class="bmeta">${count} student(s) enrolled</div>
+    </div>`;
+  }).join('');
+}
+function renderBranchSelects(){
+  const opts = state.branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}${b.code?` (${escapeHtml(b.code)})`:''}</option>`).join('');
+  document.getElementById('studentBranchFilter').innerHTML = '<option value="">All Branches</option>' + opts;
+}
+function openBranchModal(){
+  openModal('Add New Branch / Course', `
+    <div class="ufield"><label>Branch Name</label><input id="mBranchName" placeholder="e.g. B.Tech Computer Science"/></div>
+    <div class="ufield"><label>Code</label><input id="mBranchCode" placeholder="e.g. CSE"/></div>
+  `, async ()=>{
+    const name = document.getElementById('mBranchName').value.trim();
+    const code = document.getElementById('mBranchCode').value.trim();
+    if(!name){ alert('Branch name is required'); return; }
+    const { error } = await sb.from('branches').insert({ name, code: code||null });
+    if(error){ toast('Error: '+error.message, true); return; }
+    closeModal(); showStamp(); toast('Branch added'); await loadAll();
+  });
+}
+async function deleteBranch(id){
+  const count = state.students.filter(s=>s.branch_id===id).length;
+  const msg = count>0
+    ? `This branch has ${count} student(s) linked to it. Deleting it will leave those students with no branch assigned. Delete anyway?`
+    : 'Delete this branch?';
+  if(!confirm(msg)) return;
+  const { error } = await sb.from('branches').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  toast('Branch deleted'); await loadAll();
+}
+
+// ============ STUDENTS ============
+function studentPhotoBlock(s){
+  return s.photo_url
+    ? `<img src="${s.photo_url}">`
+    : `<div class="noimg">${escapeHtml((s.full_name||'?').slice(0,1).toUpperCase())}</div>`;
+}
+function renderStudents(){
+  const grid = document.getElementById('studentGrid');
+  const search = (document.getElementById('studentSearch').value||'').toLowerCase();
+  const branchFilter = document.getElementById('studentBranchFilter').value;
+  let list = state.students.filter(s=>{
+    const matchSearch = !search || (s.full_name||'').toLowerCase().includes(search) || (s.roll_number||'').toLowerCase().includes(search);
+    const matchBranch = !branchFilter || s.branch_id === branchFilter;
+    return matchSearch && matchBranch;
+  });
+  if(list.length===0){ grid.innerHTML = '<div class="empty-note">No student records found. Click "+ Add New Student" to get started.</div>'; return; }
+  grid.innerHTML = list.map(s=>{
+    const branch = state.branches.find(b=>b.id===s.branch_id);
+    return `<div class="person-card" onclick="openStudentFile('${s.id}')">
+      <button class="card-del" title="Delete student" onclick="event.stopPropagation();deleteStudent('${s.id}')">&#10005;</button>
+      <div class="person-photo-wrap">${studentPhotoBlock(s)}<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div>
+      <div class="pname">${escapeHtml(s.full_name)}</div>
+      <div class="pmeta">Roll #${escapeHtml(s.roll_number||'-')}</div>
+      <div class="ptag">${branch?escapeHtml(branch.name):'No branch'}${s.semester?` &middot; Sem ${s.semester}`:''}</div>
+    </div>`;
+  }).join('');
+}
+function openStudentModal(){
+  tempPhoto = null;
+  const branchOpts = state.branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+  openModal('Add New Student', `
+    <div class="photo-drop" id="photoDrop" onclick="document.getElementById('mStudentPhoto').click()">
+      <div id="sPhotoPreviewArea"><span>Click here to upload the student's photo</span></div>
+      <input type="file" id="mStudentPhoto" accept="image/*" style="display:none" onchange="handleStudentPhotoPick(event)"/>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Full Name</label><input id="mSName"/></div>
+      <div class="ufield"><label>Roll Number</label><input id="mSRoll"/></div>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Branch</label><select id="mSBranch">${branchOpts||'<option value="">-</option>'}</select></div>
+      <div class="ufield"><label>Semester</label><select id="mSSem">${Array.from({length:SEM_COUNT},(_,i)=>`<option value="${i+1}">Semester ${i+1}</option>`).join('')}</select></div>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Father's Name</label><input id="mSFather"/></div>
+      <div class="ufield"><label>CNIC / B-Form</label><input id="mSCnic"/></div>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Contact Number</label><input id="mSContact"/></div>
+      <div class="ufield"><label>Email</label><input id="mSEmail"/></div>
+    </div>
+    <div class="ufield"><label>Address</label><textarea id="mSAddress"></textarea></div>
+  `, async ()=>{
+    const name = document.getElementById('mSName').value.trim();
+    const roll = document.getElementById('mSRoll').value.trim();
+    if(!name || !roll){ alert('Name and Roll Number are required'); return; }
+    const payload = {
+      full_name:name, roll_number:roll,
+      branch_id: document.getElementById('mSBranch').value || null,
+      semester: parseInt(document.getElementById('mSSem').value)||null,
+      father_name: document.getElementById('mSFather').value.trim()||null,
+      cnic_bform: document.getElementById('mSCnic').value.trim()||null,
+      contact_number: document.getElementById('mSContact').value.trim()||null,
+      email: document.getElementById('mSEmail').value.trim()||null,
+      address: document.getElementById('mSAddress').value.trim()||null,
+    };
+    if(tempPhoto) payload.photo_url = await uploadPhotoBlob(tempPhoto);
+    const { error } = await sb.from('students').insert(payload);
+    if(error){ toast('Error: '+error.message, true); return; }
+    closeModal(); showStamp(); toast('Student added'); await loadAll();
+  });
+}
+async function handleStudentPhotoPick(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const { blob, dataUrl } = await compressImage(file);
+  tempPhoto = blob;
+  document.getElementById('sPhotoPreviewArea').innerHTML = `<img src="${dataUrl}"/><span>Photo selected &#10003;</span>`;
+}
+async function deleteStudent(id){
+  const s = state.students.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`Remove ${s.full_name} from records? This cannot be undone.`)) return;
+  const { error } = await sb.from('students').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  toast('Student removed'); await loadAll();
+}
+
+// ---- Student "filebook" detail view with semester subjects/marks ----
+function openStudentFile(id){
+  activeFilebookStudentId = id;
+  activeFilebookSem = state.students.find(s=>s.id===id)?.semester || 1;
+  renderStudentFile();
+}
+function renderStudentFile(){
+  const s = state.students.find(x=>x.id===activeFilebookStudentId);
+  if(!s) return;
+  const branch = state.branches.find(b=>b.id===s.branch_id);
+  let overlay = document.getElementById('studentFileOverlay');
+  const isNew = !overlay;
+  if(isNew){
+    overlay = document.createElement('div');
+    overlay.className='fileoverlay';
+    overlay.id='studentFileOverlay';
+    document.body.appendChild(overlay);
+  }
+  const semTabs = Array.from({length:SEM_COUNT},(_,i)=>i+1).map(n=>
+    `<button class="sem-tab ${n===activeFilebookSem?'active':''}" onclick="activeFilebookSem=${n};renderStudentFile()">Sem ${n}</button>`).join('');
+  const subjRows = state.subjects.filter(sub=>sub.student_id===s.id && sub.semester===activeFilebookSem);
+  const subjTableRows = subjRows.map(r=>`
+    <tr>
+      <td><input value="${escapeHtml(r.subject_name)}" onchange="updateSubject('${r.id}','subject_name',this.value)"></td>
+      <td><input value="${escapeHtml(r.marks||'')}" onchange="updateSubject('${r.id}','marks',this.value)"></td>
+      <td><button class="rm-btn" onclick="deleteSubject('${r.id}')">&#10005;</button></td>
+    </tr>`).join('');
+
+  overlay.innerHTML = `
+    <div class="filebook">
+      <div class="filebook-head"><h3>Student File &mdash; ${escapeHtml(s.full_name)}</h3>
+        <button class="ubtn danger" onclick="deleteStudent('${s.id}'); document.getElementById('studentFileOverlay').remove();">Delete Student</button>
+        <button class="umodal-close" style="color:#fff" onclick="document.getElementById('studentFileOverlay').remove()">&#10005;</button></div>
+      <div class="filebook-body">
+        <div class="fb-page fb-left">
+          <div class="fb-photo" ${s.photo_url?`onclick="showLightbox('${s.photo_url}')"`:''}>${s.photo_url?`<img src="${s.photo_url}"/>`:''}</div>
+          <div class="fb-name">${escapeHtml(s.full_name)}</div>
+          <div class="fb-row"><b>Roll No.</b>${escapeHtml(s.roll_number||'-')}</div>
+          <div class="fb-row"><b>Branch</b>${branch?escapeHtml(branch.name):'-'}</div>
+          <div class="fb-row"><b>Father's Name</b>${escapeHtml(s.father_name||'-')}</div>
+          <div class="fb-row"><b>CNIC / B-Form</b>${escapeHtml(s.cnic_bform||'-')}</div>
+          <div class="fb-row"><b>Contact</b>${escapeHtml(s.contact_number||'-')}</div>
+          <div class="fb-row"><b>Email</b>${escapeHtml(s.email||'-')}</div>
+          <div class="fb-row"><b>Address</b>${escapeHtml(s.address||'-')}</div>
+          <div class="fb-stamp">UNIVERSITY<br/>VERIFIED</div>
+        </div>
+        <div class="fb-page fb-right">
+          <div class="sem-tabs">${semTabs}</div>
+          <table class="subj-table">
+            <thead><tr><th>Subject</th><th>Marks / Grade</th><th></th></tr></thead>
+            <tbody>${subjTableRows || `<tr><td colspan="3" style="color:#8c7f68;font-style:italic;">No subjects added for this semester yet.</td></tr>`}</tbody>
+          </table>
+          <button class="ubtn secondary add-subj-btn" onclick="addSubject('${s.id}')">+ Add Subject</button>
+
+          <div class="doc-section">
+            <h4>Documents</h4>
+            ${docListHtml(state.studentDocs.filter(d=>d.student_id===s.id), 'deleteStudentDoc')}
+            <button class="ubtn secondary doc-upload-btn small">+ Upload Document
+              <input type="file" onchange="handleStudentDocUpload(event,'${s.id}')">
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+async function addSubject(studentId){
+  const { data, error } = await sb.from('student_subjects').insert({
+    student_id: studentId, semester: activeFilebookSem, subject_name:'New Subject', marks:''
+  }).select().single();
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.subjects.push(data);
+  renderStudentFile();
+}
+async function updateSubject(id, field, value){
+  const { error } = await sb.from('student_subjects').update({ [field]: value }).eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  const row = state.subjects.find(x=>x.id===id);
+  if(row) row[field] = value;
+}
+async function deleteSubject(id){
+  const { error } = await sb.from('student_subjects').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.subjects = state.subjects.filter(x=>x.id!==id);
+  renderStudentFile();
+}
+async function handleStudentDocUpload(ev, studentId){
+  const file = ev.target.files[0]; if(!file) return;
+  const url = await uploadDocumentFile(file);
+  if(!url) return;
+  const { data, error } = await sb.from('student_documents').insert({ student_id: studentId, file_name: file.name, file_url: url }).select().single();
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.studentDocs.unshift(data);
+  toast('Document uploaded');
+  renderStudentFile();
+}
+async function deleteStudentDoc(id){
+  if(!confirm('Delete this document?')) return;
+  const { error } = await sb.from('student_documents').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.studentDocs = state.studentDocs.filter(x=>x.id!==id);
+  renderStudentFile();
+}
+
+// ============ TEACHERS ============
+function renderTeachers(){
+  const grid = document.getElementById('teacherGrid');
+  if(state.teachers.length===0){ grid.innerHTML = '<div class="empty-note">No teacher records found. Click "+ Add New Teacher" to get started.</div>'; return; }
+  grid.innerHTML = state.teachers.map(t=>{
+    const branch = state.branches.find(b=>b.id===t.branch_id);
+    return `<div class="person-card" onclick="openTeacherFile('${t.id}')">
+      <button class="card-del" title="Delete teacher" onclick="event.stopPropagation();deleteTeacher('${t.id}')">&#10005;</button>
+      <div class="person-photo-wrap">${t.photo_url?`<img src="${t.photo_url}">`:`<div class="noimg">${escapeHtml((t.full_name||'?').slice(0,1).toUpperCase())}</div>`}<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div>
+      <div class="pname">${escapeHtml(t.full_name)}</div>
+      <div class="pmeta">${escapeHtml(t.designation||'Faculty')}</div>
+      <div class="ptag">${branch?escapeHtml(branch.name):'No department'}</div>
+    </div>`;
+  }).join('');
+}
+function openTeacherModal(){
+  tempTeacherPhoto = null;
+  const branchOpts = state.branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+  openModal('Add New Teacher', `
+    <div class="photo-drop" id="photoDrop" onclick="document.getElementById('mTeacherPhoto').click()">
+      <div id="tPhotoPreviewArea"><span>Click here to upload the teacher's photo</span></div>
+      <input type="file" id="mTeacherPhoto" accept="image/*" style="display:none" onchange="handleTeacherPhotoPick(event)"/>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Name</label><input id="mTeacherName"/></div>
+      <div class="ufield"><label>Designation</label><input id="mTeacherDesig" placeholder="e.g. Assistant Professor"/></div>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Department / Branch</label><select id="mTeacherBranch">${branchOpts||'<option value="">-</option>'}</select></div>
+      <div class="ufield"><label>Qualification</label><input id="mQual"/></div>
+    </div>
+    <div class="two-col">
+      <div class="ufield"><label>Contact Number</label><input id="mTContact"/></div>
+      <div class="ufield"><label>Email</label><input id="mTEmail"/></div>
+    </div>
+    <div class="ufield"><label>CNIC</label><input id="mTCnic"/></div>
+  `, async ()=>{
+    const name = document.getElementById('mTeacherName').value.trim();
+    if(!name){ alert('Teacher name is required'); return; }
+    const payload = {
+      full_name:name,
+      designation: document.getElementById('mTeacherDesig').value.trim()||null,
+      branch_id: document.getElementById('mTeacherBranch').value || null,
+      qualification: document.getElementById('mQual').value.trim()||null,
+      contact_number: document.getElementById('mTContact').value.trim()||null,
+      email: document.getElementById('mTEmail').value.trim()||null,
+      cnic: document.getElementById('mTCnic').value.trim()||null,
+    };
+    if(tempTeacherPhoto) payload.photo_url = await uploadPhotoBlob(tempTeacherPhoto);
+    const { error } = await sb.from('teachers').insert(payload);
+    if(error){ toast('Error: '+error.message, true); return; }
+    closeModal(); showStamp(); toast('Teacher added'); await loadAll();
+  });
+}
+async function handleTeacherPhotoPick(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const { blob, dataUrl } = await compressImage(file);
+  tempTeacherPhoto = blob;
+  document.getElementById('tPhotoPreviewArea').innerHTML = `<img src="${dataUrl}"/><span>Photo selected &#10003;</span>`;
+}
+async function deleteTeacher(id){
+  const t = state.teachers.find(x=>x.id===id);
+  if(!t) return;
+  if(!confirm(`Remove ${t.full_name} from records? This cannot be undone.`)) return;
+  const { error } = await sb.from('teachers').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  toast('Teacher removed'); await loadAll();
+}
+function openTeacherFile(id){
+  activeFilebookTeacherId = id;
+  activeFilebookTeacherSem = 1;
+  renderTeacherFile();
+}
+function renderTeacherFile(){
+  const t = state.teachers.find(x=>x.id===activeFilebookTeacherId);
+  if(!t) return;
+  const branch = state.branches.find(b=>b.id===t.branch_id);
+  let overlay = document.getElementById('teacherFileOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.className='fileoverlay';
+    overlay.id='teacherFileOverlay';
+    document.body.appendChild(overlay);
+  }
+  const semTabs = Array.from({length:SEM_COUNT},(_,i)=>i+1).map(n=>
+    `<button class="sem-tab ${n===activeFilebookTeacherSem?'active':''}" onclick="activeFilebookTeacherSem=${n};renderTeacherFile()">Sem ${n}</button>`).join('');
+  const subjRows = state.teacherSubjects.filter(sub=>sub.teacher_id===t.id && sub.semester===activeFilebookTeacherSem);
+  const subjTableRows = subjRows.map(r=>`
+    <tr>
+      <td><input value="${escapeHtml(r.subject_name)}" onchange="updateTeacherSubject('${r.id}',this.value)"></td>
+      <td><button class="rm-btn" onclick="deleteTeacherSubject('${r.id}')">&#10005;</button></td>
+    </tr>`).join('');
+
+  overlay.innerHTML = `
+    <div class="filebook">
+      <div class="filebook-head"><h3>Teacher File &mdash; ${escapeHtml(t.full_name)}</h3>
+        <button class="ubtn danger" onclick="deleteTeacher('${t.id}'); document.getElementById('teacherFileOverlay').remove();">Delete Teacher</button>
+        <button class="umodal-close" style="color:#fff" onclick="document.getElementById('teacherFileOverlay').remove()">&#10005;</button></div>
+      <div class="filebook-body">
+        <div class="fb-page fb-left">
+          <div class="fb-photo" ${t.photo_url?`onclick="showLightbox('${t.photo_url}')"`:''}>${t.photo_url?`<img src="${t.photo_url}"/>`:''}</div>
+          <div class="fb-name">${escapeHtml(t.full_name)}</div>
+          <div class="fb-row"><b>Designation</b>${escapeHtml(t.designation||'-')}</div>
+          <div class="fb-row"><b>Department</b>${branch?escapeHtml(branch.name):'-'}</div>
+          <div class="fb-row"><b>Qualification</b>${escapeHtml(t.qualification||'-')}</div>
+          <div class="fb-row"><b>Contact</b>${escapeHtml(t.contact_number||'-')}</div>
+          <div class="fb-row"><b>Email</b>${escapeHtml(t.email||'-')}</div>
+          <div class="fb-row"><b>CNIC</b>${escapeHtml(t.cnic||'-')}</div>
+          <div class="fb-stamp">UNIVERSITY<br/>VERIFIED</div>
+        </div>
+        <div class="fb-page fb-right">
+          <div class="sem-tabs">${semTabs}</div>
+          <table class="subj-table">
+            <thead><tr><th>Subject Taught</th><th></th></tr></thead>
+            <tbody>${subjTableRows || `<tr><td colspan="2" style="color:#8c7f68;font-style:italic;">No subjects assigned for this semester yet.</td></tr>`}</tbody>
+          </table>
+          <button class="ubtn secondary add-subj-btn" onclick="addTeacherSubject('${t.id}')">+ Add Subject</button>
+
+          <div class="doc-section">
+            <h4>Documents</h4>
+            ${docListHtml(state.teacherDocs.filter(d=>d.teacher_id===t.id), 'deleteTeacherDoc')}
+            <button class="ubtn secondary doc-upload-btn small">+ Upload Document
+              <input type="file" onchange="handleTeacherDocUpload(event,'${t.id}')">
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+async function addTeacherSubject(teacherId){
+  const { data, error } = await sb.from('teacher_subjects').insert({
+    teacher_id: teacherId, semester: activeFilebookTeacherSem, subject_name:'New Subject'
+  }).select().single();
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.teacherSubjects.push(data);
+  renderTeacherFile();
+}
+async function updateTeacherSubject(id, value){
+  const { error } = await sb.from('teacher_subjects').update({ subject_name: value }).eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  const row = state.teacherSubjects.find(x=>x.id===id);
+  if(row) row.subject_name = value;
+}
+async function deleteTeacherSubject(id){
+  const { error } = await sb.from('teacher_subjects').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.teacherSubjects = state.teacherSubjects.filter(x=>x.id!==id);
+  renderTeacherFile();
+}
+async function handleTeacherDocUpload(ev, teacherId){
+  const file = ev.target.files[0]; if(!file) return;
+  const url = await uploadDocumentFile(file);
+  if(!url) return;
+  const { data, error } = await sb.from('teacher_documents').insert({ teacher_id: teacherId, file_name: file.name, file_url: url }).select().single();
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.teacherDocs.unshift(data);
+  toast('Document uploaded');
+  renderTeacherFile();
+}
+async function deleteTeacherDoc(id){
+  if(!confirm('Delete this document?')) return;
+  const { error } = await sb.from('teacher_documents').delete().eq('id', id);
+  if(error){ toast('Error: '+error.message, true); return; }
+  state.teacherDocs = state.teacherDocs.filter(x=>x.id!==id);
+  renderTeacherFile();
+}
+
+// ============ MODAL HELPER ============
+function openModal(title, bodyHtml, onSave){
+  const overlay = document.createElement('div');
+  overlay.className='uoverlay';
+  overlay.id='genericModal';
+  overlay.innerHTML = `
+    <div class="umodal">
+      <div class="umodal-head"><h3>${title}</h3><button class="umodal-close" onclick="closeModal()">&#10005;</button></div>
+      <div class="umodal-body">
+        ${bodyHtml}
+        <div class="umodal-actions">
+          <button class="ubtn ghost" onclick="closeModal()">Cancel</button>
+          <button class="ubtn" id="modalSaveBtn">Save</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('modalSaveBtn').onclick = async (e)=>{
+    e.target.disabled = true; e.target.textContent = 'Saving…';
+    await onSave();
+  };
+}
+function closeModal(){ const m = document.getElementById('genericModal'); if(m) m.remove(); }
+
+// ============ EXPORT ============
+function csvEscape(v){ if(v===undefined||v===null) v=''; v=String(v); if(/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function exportStudentsExcel(){
+  const uniName = document.getElementById('uniName').value || 'University';
+  const headers = ['Sr. #','Name of University','Department / Branch','Semester','Roll No.','Name of Student','Father Name','CNIC No.','Contact Number','Subject','Marks/Grade'];
+  const rows = [headers];
+  let sr=1;
+  state.students.forEach(s=>{
+    const branch = state.branches.find(b=>b.id===s.branch_id);
+    const branchName = branch?branch.name:'';
+    const subs = state.subjects.filter(x=>x.student_id===s.id);
+    if(subs.length===0){
+      rows.push([sr,uniName,branchName,s.semester||'',s.roll_number,s.full_name,s.father_name,s.cnic_bform,s.contact_number,'','']);
+    } else {
+      subs.forEach(sub=>{
+        rows.push([sr,uniName,branchName,sub.semester,s.roll_number,s.full_name,s.father_name,s.cnic_bform,s.contact_number,sub.subject_name,sub.marks]);
+      });
+    }
+    sr++;
+  });
+  const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  downloadFile('students-export.csv', csv, 'text/csv;charset=utf-8;');
+
+  const tHeaders = ['Sr. #','Name of University','Department / Branch','Designation','Teacher Name','Qualification','Contact Number','Email','Semester','Subject Taught'];
+  const tRows = [tHeaders];
+  let tsr=1;
+  state.teachers.forEach(t=>{
+    const branch = state.branches.find(b=>b.id===t.branch_id);
+    const branchName = branch?branch.name:'';
+    const subs = state.teacherSubjects.filter(x=>x.teacher_id===t.id);
+    if(subs.length===0){
+      tRows.push([tsr,uniName,branchName,t.designation,t.full_name,t.qualification,t.contact_number,t.email,'','']);
+    } else {
+      subs.forEach(sub=>{
+        tRows.push([tsr,uniName,branchName,t.designation,t.full_name,t.qualification,t.contact_number,t.email,sub.semester,sub.subject_name]);
+      });
+    }
+    tsr++;
+  });
+  const tcsv = tRows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  downloadFile('teachers-export.csv', tcsv, 'text/csv;charset=utf-8;');
+}
+
+loadAll();
+</script>
+</body>
+</html>
